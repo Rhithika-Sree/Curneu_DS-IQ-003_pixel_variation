@@ -1,0 +1,86 @@
+/// INCLUDING NEEDED HEADER FILES ///
+# include<opencv2/imgcodecs.hpp>
+# include<opencv2/highgui.hpp>
+# include<opencv2/imgproc.hpp>
+# include<opencv2/objdetect.hpp>
+# include<iostream>
+#include <string>
+#include <opencv2/opencv.hpp>
+#include <opencv2/videoio.hpp>
+
+#define COLOR_ROWS 80
+#define COLOR_COLS 250
+
+using namespace cv;
+using namespace std;
+
+
+
+void main() {
+	/// IMPORTING VIDEO ///
+	string path = "source/video.mp4";
+	VideoCapture cap(path);
+	/// CREATING NECESSARY MATRICE FOR STORING IMAGE FRAMES ///
+	Mat img;
+	Mat snapshot;
+	Mat colorArray;
+	
+	while (true) {
+		cap.read(img);
+		snapshot = Mat(img.size(), CV_8UC3, Scalar(0, 0, 0));
+		/*cv::imshow("Snapshot", snapshot);*/
+
+
+		colorArray = Mat(COLOR_ROWS, COLOR_COLS, CV_8UC3, Scalar(0, 0, 0));
+		/*cv::imshow("Color", colorArray);*/
+		/*cv::setMouseCallback("Snapshot", on_mouse_click, &snapshot);*/
+
+
+		vector<Mat> bgr_planes;
+		/// SEPARATING THE IMAGE INTO THREE DIFFERENT PLANES (RGB) ///
+		split(img, bgr_planes);
+
+
+		/// SETTING RANGE FOR HISTOGRAM PLOTS ///
+		int histSize = 256;
+
+		float range[] = { 0, 256 };
+		const float* histRange = { range };
+
+		/// CREATING MAT OBJECTS ///
+		Mat b_hist, g_hist, r_hist;
+
+		/// CALCULATING HISTOGRAM ///
+		calcHist(&bgr_planes[0], 1, 0, Mat(), b_hist, 1, &histSize, &histRange, true, false);
+		calcHist(&bgr_planes[1], 1, 0, Mat(), g_hist, 1, &histSize, &histRange, true, false);
+		calcHist(&bgr_planes[2], 1, 0, Mat(), r_hist, 1, &histSize, &histRange, true, false);
+
+		/// DISPLAYING THE CREATED HISTOGRAMS ///
+		int hist_w = 400; int hist_h = 400;
+		int bin_w = cvRound((double)hist_w / histSize);
+
+		Mat histImage(hist_h, hist_w, CV_8UC3, Scalar(255, 255, 255));
+
+		/// NORMALIZING HISTOGRAMS ///
+		normalize(b_hist, b_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
+		normalize(g_hist, g_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
+		normalize(r_hist, r_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
+
+		for (int i = 1; i < histSize; i++)
+		{
+			line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(b_hist.at<float>(i - 1))),
+				Point(bin_w * (i), hist_h - cvRound(b_hist.at<float>(i))), Scalar(255, 0, 0), 2, 8, 0);
+			line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(g_hist.at<float>(i - 1))),
+				Point(bin_w * (i), hist_h - cvRound(g_hist.at<float>(i))), Scalar(0, 255, 0), 2, 8, 0);
+			line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(r_hist.at<float>(i - 1))),
+				Point(bin_w * (i), hist_h - cvRound(r_hist.at<float>(i))), Scalar(0, 0, 255), 2, 8, 0);
+		}
+		
+		/// TO SHOW THE VARIATION OF PIXEL IN HISTOGRAM USING RGB VALUES ///
+		imshow("pixel variations", histImage);
+		/// TO SHOW THE VIDEO THAT HAS BEEN IMPORTED ///
+		imshow("video", img);
+		/// GIVING EACH FRAMES A DELAY OF 15 MILLISECONDS ///
+		waitKey(15);
+	}
+}
